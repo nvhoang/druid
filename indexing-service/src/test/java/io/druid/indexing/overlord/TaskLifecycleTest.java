@@ -70,8 +70,8 @@ import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.timeline.DataSegment;
@@ -351,20 +351,29 @@ public class TaskLifecycleTest
   {
     final Task indexTask = new IndexTask(
         null,
-        new IndexTask.IndexIngestionSpec(new DataSchema("foo", null,new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},new UniformGranularitySpec(
-            Granularity.DAY,
-            null,
-            ImmutableList.of(new Interval("2010-01-01/P2D"))
-        ) ),
-                                         new IndexTask.IndexIOConfig(newMockFirehoseFactory(
-                                             ImmutableList.of(
-                                                 IR("2010-01-01T01", "x", "y", 1),
-                                                 IR("2010-01-01T01", "x", "z", 1),
-                                                 IR("2010-01-02T01", "a", "b", 2),
-                                                 IR("2010-01-02T01", "a", "c", 1)
-                                             )
-                                         )),
-                                         new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec)),
+        new IndexTask.IndexIngestionSpec(
+            new DataSchema(
+                "foo",
+                null,
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new UniformGranularitySpec(
+                    Granularity.DAY,
+                    null,
+                    ImmutableList.of(new Interval("2010-01-01/P2D"))
+                )
+            ),
+            new IndexTask.IndexIOConfig(
+                newMockFirehoseFactory(
+                    ImmutableList.of(
+                        IR("2010-01-01T01", "x", "y", 1),
+                        IR("2010-01-01T01", "x", "z", 1),
+                        IR("2010-01-02T01", "a", "b", 2),
+                        IR("2010-01-02T01", "a", "c", 1)
+                    )
+                )
+            ),
+            new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec, 0)
+        ),
         TestUtils.MAPPER
     );
 
@@ -418,7 +427,7 @@ public class TaskLifecycleTest
                 )
             ),
             new IndexTask.IndexIOConfig(newMockExceptionalFirehoseFactory()),
-            new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec)
+            new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec, 0)
         ),
         TestUtils.MAPPER
     );
@@ -435,7 +444,7 @@ public class TaskLifecycleTest
   {
     // This test doesn't actually do anything right now.  We should actually put things into the Mocked coordinator
     // Such that this test can test things...
-    final Task killTask = new KillTask(null, "foo", new Interval("2010-01-02/P2D"));
+    final Task killTask = new KillTask(null, "foo", new Interval("2010-01-02/P2D"), 0);
 
     final TaskStatus status = runTask(killTask);
     Assert.assertEquals("merged statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
@@ -490,7 +499,8 @@ public class TaskLifecycleTest
         "id1",
         new TaskResource("id1", 1),
         "ds",
-        new Interval("2012-01-01/P1D")
+        new Interval("2012-01-01/P1D"),
+        0
     )
     {
       @Override
@@ -528,7 +538,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadInterval() throws Exception
   {
-    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"), 0)
     {
       @Override
       public String getType()
@@ -562,7 +572,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadVersion() throws Exception
   {
-    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"), 0)
     {
       @Override
       public String getType()

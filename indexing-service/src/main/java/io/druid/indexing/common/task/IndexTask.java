@@ -134,7 +134,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         // _not_ the version, just something uniqueish
         makeId(id, ingestionSchema),
         makeDataSource(ingestionSchema),
-        makeInterval(ingestionSchema)
+        makeInterval(ingestionSchema),
+        ingestionSchema.getTuningConfig().getTaskPriority()
     );
 
 
@@ -349,7 +350,9 @@ public class IndexTask extends AbstractFixedIntervalTask
             ingestionSchema.getTuningConfig().getIndexSpec(),
             null,
             null,
-            null
+            null,
+            0,
+            0
         ),
         metrics
     );
@@ -430,7 +433,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0, null, null) : tuningConfig;
+      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0, null, null, 0) : tuningConfig;
     }
 
     @Override
@@ -486,13 +489,15 @@ public class IndexTask extends AbstractFixedIntervalTask
     private final int rowFlushBoundary;
     private final int numShards;
     private final IndexSpec indexSpec;
+    private final int taskPriority;
 
     @JsonCreator
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
         @JsonProperty("rowFlushBoundary") int rowFlushBoundary,
         @JsonProperty("numShards") @Nullable Integer numShards,
-        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec
+        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+        @JsonProperty("taskPriority") int taskPriority
     )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
@@ -503,6 +508,7 @@ public class IndexTask extends AbstractFixedIntervalTask
           this.targetPartitionSize == -1 || this.numShards == -1,
           "targetPartitionsSize and shardCount both cannot be set"
       );
+      this.taskPriority = taskPriority;
     }
 
     @JsonProperty
@@ -527,6 +533,12 @@ public class IndexTask extends AbstractFixedIntervalTask
     public IndexSpec getIndexSpec()
     {
       return indexSpec;
+    }
+
+    @JsonProperty
+    public int getTaskPriority()
+    {
+      return taskPriority;
     }
   }
 }

@@ -113,7 +113,8 @@ public class IndexTaskTest
                 2,
                 0,
                 null,
-                indexSpec
+                indexSpec,
+                0
             )
         ),
         new DefaultObjectMapper()
