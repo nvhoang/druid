@@ -17,11 +17,9 @@
 
 package io.druid.segment.loading;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.metamx.common.CompressionUtils;
-import io.druid.jackson.DefaultObjectMapper;
+import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -31,7 +29,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
+import java.net.URI;
+import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -108,11 +107,11 @@ public class LocalDataSegmentPullerTest
   {
     File zipFile = File.createTempFile("gztest", ".gz");
     File unZipFile = new File(
-            tmpDir,
-            Files.getNameWithoutExtension(
-                zipFile.getAbsolutePath()
-            )
-        );
+        tmpDir,
+        Files.getNameWithoutExtension(
+            zipFile.getAbsolutePath()
+        )
+    );
     unZipFile.delete();
     zipFile.deleteOnExit();
     zipFile.delete();
@@ -128,7 +127,8 @@ public class LocalDataSegmentPullerTest
       Assert.assertFalse(unZipFile.exists());
       puller.getSegmentFiles(zipFile, tmpDir);
       Assert.assertTrue(unZipFile.exists());
-    }finally{
+    }
+    finally {
       deleteFiles(zipFile, unZipFile);
     }
   }
@@ -140,12 +140,117 @@ public class LocalDataSegmentPullerTest
     File tmpFile = File.createTempFile("test", "file", srcDir);
     File expectedOutput = new File(tmpDir, Files.getNameWithoutExtension(tmpFile.getAbsolutePath()));
     expectedOutput.delete();
-    try{
+    try {
       Assert.assertFalse(expectedOutput.exists());
       puller.getSegmentFiles(srcDir, tmpDir);
       Assert.assertTrue(expectedOutput.exists());
-    }finally{
+    }
+    finally {
       deleteFiles(expectedOutput, tmpFile, srcDir);
+    }
+  }
+
+  @Test
+  public void testSimpleLatestVersion() throws IOException, InterruptedException
+  {
+    File oldFile = File.createTempFile("old", ".txt", tmpDir);
+    oldFile.createNewFile();
+    Thread.sleep(1_000); // In order to roll over to the next unix second
+    File newFile = File.createTempFile("new", ".txt", tmpDir);
+    newFile.createNewFile();
+    try {
+      Assert.assertTrue(oldFile.exists());
+      Assert.assertTrue(newFile.exists());
+      Assert.assertNotEquals(oldFile.lastModified(), newFile.lastModified());
+      Assert.assertEquals(oldFile.getParentFile(), newFile.getParentFile());
+      Assert.assertEquals(
+          newFile.getAbsolutePath(),
+          puller.getLatestVersion(oldFile.toURI(), Pattern.compile(".*\\.txt")).getPath()
+      );
+    }
+    finally {
+      deleteFiles(oldFile, newFile);
+    }
+  }
+
+  @Test
+  public void testSimpleOneFileLatestVersion() throws IOException, InterruptedException
+  {
+    File oldFile = File.createTempFile("old", ".txt", tmpDir);
+    oldFile.createNewFile();
+    try {
+      Assert.assertTrue(oldFile.exists());
+      Assert.assertEquals(
+          oldFile.getAbsolutePath(),
+          puller.getLatestVersion(oldFile.toURI(), Pattern.compile(".*\\.txt")).getPath()
+      );
+    }
+    finally {
+      deleteFiles(oldFile);
+    }
+  }
+
+  @Test
+  public void testSimpleOneFileLatestVersionNullMatcher() throws IOException, InterruptedException
+  {
+    File oldFile = File.createTempFile("old", ".txt", tmpDir);
+    oldFile.createNewFile();
+    try {
+      Assert.assertTrue(oldFile.exists());
+      Assert.assertEquals(
+          oldFile.getAbsolutePath(),
+          puller.getLatestVersion(oldFile.toURI(), null).getPath()
+      );
+    }
+    finally {
+      deleteFiles(oldFile);
+    }
+  }
+
+  @Test
+  public void testNoLatestVersion() throws IOException, InterruptedException
+  {
+    File oldFile = File.createTempFile("test", ".txt", tmpDir);
+    URI uri = oldFile.toURI();
+    deleteFiles(oldFile);
+    Assert.assertNull(
+        puller.getLatestVersion(uri, Pattern.compile(".*\\.txt"))
+    );
+  }
+
+  @Test
+  public void testLatestVersionInDir() throws IOException, InterruptedException
+  {
+    File oldFile = File.createTempFile("old", ".txt", tmpDir);
+    oldFile.createNewFile();
+    Thread.sleep(1_000); // In order to roll over to the next unix second
+    File newFile = File.createTempFile("new", ".txt", tmpDir);
+    newFile.createNewFile();
+    try {
+      Assert.assertTrue(oldFile.exists());
+      Assert.assertTrue(newFile.exists());
+      Assert.assertEquals(
+          newFile.getAbsolutePath(),
+          puller.getLatestVersion(oldFile.getParentFile().toURI(), Pattern.compile(".*\\.txt")).getPath()
+      );
+    }
+    finally {
+      deleteFiles(oldFile, newFile);
+    }
+  }
+
+  @Test
+  public void testExampleRegex() throws IOException
+  {
+    File tmpDir = Files.createTempDir();
+    File tmpFile = new File(tmpDir, "renames-123.gz");
+    tmpFile.createNewFile();
+    try{
+      Assert.assertTrue(tmpFile.exists());
+      Assert.assertFalse(tmpFile.isDirectory());
+      Assert.assertEquals(tmpFile.getAbsolutePath(), puller.getLatestVersion(tmpDir.toURI(), Pattern.compile("renames-[0-9]*\\.gz")).getPath());
+    }finally{
+      FileUtils.deleteDirectory(tmpDir);
     }
   }
 }

@@ -59,31 +59,32 @@ public class MemcachedCache implements Cache
 
       OperationQueueFactory opQueueFactory;
       long maxQueueBytes = config.getMaxOperationQueueSize();
-      if(maxQueueBytes > 0) {
+      if (maxQueueBytes > 0) {
         opQueueFactory = new MemcachedOperationQueueFactory(maxQueueBytes);
       } else {
         opQueueFactory = new LinkedOperationQueueFactory();
       }
 
       return new MemcachedCache(
-        new MemcachedClient(
-          new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
-                                        .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
-                                        .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
-                                        .setDaemon(true)
-                                        .setFailureMode(FailureMode.Cancel)
-                                        .setTranscoder(transcoder)
-                                        .setShouldOptimize(true)
-                                        .setOpQueueMaxBlockTime(config.getTimeout())
-                                        .setOpTimeout(config.getTimeout())
-                                        .setReadBufferSize(config.getReadBufferSize())
-                                        .setOpQueueFactory(opQueueFactory)
-                                        .build(),
-          AddrUtil.getAddresses(config.getHosts())
-        ),
-        config
+          new MemcachedClient(
+              new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
+                                            .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
+                                            .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
+                                            .setDaemon(true)
+                                            .setFailureMode(FailureMode.Cancel)
+                                            .setTranscoder(transcoder)
+                                            .setShouldOptimize(true)
+                                            .setOpQueueMaxBlockTime(config.getTimeout())
+                                            .setOpTimeout(config.getTimeout())
+                                            .setReadBufferSize(config.getReadBufferSize())
+                                            .setOpQueueFactory(opQueueFactory)
+                                            .build(),
+              AddrUtil.getAddresses(config.getHosts())
+          ),
+          config
       );
-    } catch(IOException e) {
+    }
+    catch (IOException e) {
       throw Throwables.propagate(e);
     }
   }
@@ -100,11 +101,14 @@ public class MemcachedCache implements Cache
   private final AtomicLong errorCount = new AtomicLong(0);
 
 
-  MemcachedCache(MemcachedClientIF client,  MemcachedCacheConfig config) {
-    Preconditions.checkArgument(config.getMemcachedPrefix().length() <= MAX_PREFIX_LENGTH,
-                                "memcachedPrefix length [%d] exceeds maximum length [%d]",
-                                config.getMemcachedPrefix().length(),
-                                MAX_PREFIX_LENGTH);
+  MemcachedCache(MemcachedClientIF client, MemcachedCacheConfig config)
+  {
+    Preconditions.checkArgument(
+        config.getMemcachedPrefix().length() <= MAX_PREFIX_LENGTH,
+        "memcachedPrefix length [%d] exceeds maximum length [%d]",
+        config.getMemcachedPrefix().length(),
+        MAX_PREFIX_LENGTH
+    );
     this.timeout = config.getTimeout();
     this.expiration = config.getExpiration();
     this.client = client;
@@ -131,7 +135,8 @@ public class MemcachedCache implements Cache
     Future<Object> future;
     try {
       future = client.asyncGet(computeKeyHash(memcachedPrefix, key));
-    } catch(IllegalStateException e) {
+    }
+    catch (IllegalStateException e) {
       // operation did not get queued in time (queue is full)
       errorCount.incrementAndGet();
       log.warn(e, "Unable to queue cache operation");
@@ -139,24 +144,23 @@ public class MemcachedCache implements Cache
     }
     try {
       byte[] bytes = (byte[]) future.get(timeout, TimeUnit.MILLISECONDS);
-      if(bytes != null) {
+      if (bytes != null) {
         hitCount.incrementAndGet();
-      }
-      else {
+      } else {
         missCount.incrementAndGet();
       }
       return bytes == null ? null : deserializeValue(key, bytes);
     }
-    catch(TimeoutException e) {
+    catch (TimeoutException e) {
       timeoutCount.incrementAndGet();
       future.cancel(false);
       return null;
     }
-    catch(InterruptedException e) {
+    catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw Throwables.propagate(e);
     }
-    catch(ExecutionException e) {
+    catch (ExecutionException e) {
       errorCount.incrementAndGet();
       log.warn(e, "Exception pulling item from cache");
       return null;
@@ -168,14 +172,16 @@ public class MemcachedCache implements Cache
   {
     try {
       client.set(computeKeyHash(memcachedPrefix, key), expiration, serializeValue(key, value));
-    } catch(IllegalStateException e) {
+    }
+    catch (IllegalStateException e) {
       // operation did not get queued in time (queue is full)
       errorCount.incrementAndGet();
       log.warn(e, "Unable to queue cache operation");
     }
   }
 
-  private static byte[] serializeValue(NamedKey key, byte[] value) {
+  private static byte[] serializeValue(NamedKey key, byte[] value)
+  {
     byte[] keyBytes = key.toByteArray();
     return ByteBuffer.allocate(Ints.BYTES + keyBytes.length + value.length)
                      .putInt(keyBytes.length)
@@ -184,7 +190,8 @@ public class MemcachedCache implements Cache
                      .array();
   }
 
-  private static byte[] deserializeValue(NamedKey key, byte[] bytes) {
+  private static byte[] deserializeValue(NamedKey key, byte[] bytes)
+  {
     ByteBuffer buf = ByteBuffer.wrap(bytes);
 
     final int keyLength = buf.getInt();
@@ -193,8 +200,10 @@ public class MemcachedCache implements Cache
     byte[] value = new byte[buf.remaining()];
     buf.get(value);
 
-    Preconditions.checkState(Arrays.equals(keyBytes, key.toByteArray()),
-                             "Keys do not match, possible hash collision?");
+    Preconditions.checkState(
+        Arrays.equals(keyBytes, key.toByteArray()),
+        "Keys do not match, possible hash collision?"
+    );
     return value;
   }
 
@@ -220,7 +229,8 @@ public class MemcachedCache implements Cache
     BulkFuture<Map<String, Object>> future;
     try {
       future = client.asyncGetBulk(keyLookup.keySet());
-    } catch(IllegalStateException e) {
+    }
+    catch (IllegalStateException e) {
       // operation did not get queued in time (queue is full)
       errorCount.incrementAndGet();
       log.warn(e, "Unable to queue cache operation");
@@ -230,14 +240,14 @@ public class MemcachedCache implements Cache
     try {
       Map<String, Object> some = future.getSome(timeout, TimeUnit.MILLISECONDS);
 
-      if(future.isTimeout()) {
+      if (future.isTimeout()) {
         future.cancel(false);
         timeoutCount.incrementAndGet();
       }
       missCount.addAndGet(keyLookup.size() - some.size());
       hitCount.addAndGet(some.size());
 
-      for(Map.Entry<String, Object> entry : some.entrySet()) {
+      for (Map.Entry<String, Object> entry : some.entrySet()) {
         final NamedKey key = keyLookup.get(entry.getKey());
         final byte[] value = (byte[]) entry.getValue();
         results.put(
@@ -248,11 +258,11 @@ public class MemcachedCache implements Cache
 
       return results;
     }
-    catch(InterruptedException e) {
+    catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw Throwables.propagate(e);
     }
-    catch(ExecutionException e) {
+    catch (ExecutionException e) {
       errorCount.incrementAndGet();
       log.warn(e, "Exception pulling item from cache");
       return results;
@@ -266,18 +276,20 @@ public class MemcachedCache implements Cache
   }
 
   public static final int MAX_PREFIX_LENGTH =
-        MemcachedClientIF.MAX_KEY_LENGTH
-        - 40 // length of namespace hash
-        - 40 // length of key hash
-        - 2  // length of separators
-        ;
+      MemcachedClientIF.MAX_KEY_LENGTH
+      - 40 // length of namespace hash
+      - 40 // length of key hash
+      - 2  // length of separators
+      ;
 
-  private static String computeKeyHash(String memcachedPrefix, NamedKey key) {
+  private static String computeKeyHash(String memcachedPrefix, NamedKey key)
+  {
     // hash keys to keep things under 250 characters for memcached
     return memcachedPrefix + ":" + DigestUtils.sha1Hex(key.namespace) + ":" + DigestUtils.sha1Hex(key.key);
   }
 
-  public boolean isLocal() {
+  public boolean isLocal()
+  {
     return false;
   }
 }

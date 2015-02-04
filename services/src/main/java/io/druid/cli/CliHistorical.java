@@ -37,9 +37,11 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
+import io.druid.server.http.AnnouncementSlaveResource;
 import io.druid.server.http.HistoricalResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
+import io.druid.server.namespace.NamespacedExtractionModule;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -81,6 +83,7 @@ public class CliHistorical extends ServerRunnable
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, HistoricalResource.class);
+            Jerseys.addResource(binder, AnnouncementSlaveResource.class);
             LifecycleModule.register(binder, QueryResource.class);
 
             LifecycleModule.register(binder, ZkCoordinator.class);            
@@ -90,7 +93,8 @@ public class CliHistorical extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
             MetricsModule.register(binder, CacheMonitor.class);
           }
-        }
+        },
+        new NamespacedExtractionModule()
     );
   }
 }

@@ -18,8 +18,10 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
@@ -29,9 +31,12 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
+import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -43,6 +48,7 @@ import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *

@@ -295,7 +295,7 @@ public class HadoopConverterJobTest
           @Override
           public MetadataStorageTablesConfig get()
           {
-            return new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null);
+            return new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null, null);
           }
         }
     );

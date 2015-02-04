@@ -1760,6 +1760,7 @@ public class TopNQueryRunnerTest
                             "1upfront"
                         )
                     ), true, null, true
+
                 ),
                 null
             )
@@ -1890,6 +1891,7 @@ public class TopNQueryRunnerTest
                             "upfront",
                             "1upfront"
                         )
+
                     ), true, null, true
                 ),
                 null

@@ -68,11 +68,12 @@
         <metamx.java-util.version>0.27.0</metamx.java-util.version>
         <apache.curator.version>2.7.0</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
-        <druid.api.version>0.3.8</druid.api.version>
+        <druid.api.version>0.3.9-SNAPSHOT</druid.api.version>
         <jackson.version>2.4.4</jackson.version>
         <log4j.version>2.2</log4j.version>
         <slf4j.version>1.7.10</slf4j.version>
         <hadoop.compile.version>2.3.0</hadoop.compile.version>
+        <derby.version>10.11.1.1</derby.version>
     </properties>
 
     <modules>
@@ -99,6 +100,7 @@
         <module>extensions/mysql-metadata-storage</module>
         <module>extensions/postgresql-metadata-storage</module>
         <module>extensions/azure-extensions</module>
+        <module>extensions/kafka-extraction-namespace</module>
     </modules>
 
     <dependencyManagement>
@@ -509,12 +511,17 @@
             <dependency>
                 <groupId>org.apache.derby</groupId>
                 <artifactId>derbynet</artifactId>
-                <version>10.11.1.1</version>
+                <version>${derby.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.derby</groupId>
                 <artifactId>derbyclient</artifactId>
-                <version>10.11.1.1</version>
+                <version>${derby.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derby</artifactId>
+                <version>${derby.version}</version>
             </dependency>
 
             <!-- Test Scope -->
